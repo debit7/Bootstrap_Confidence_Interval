@@ -1,0 +1,88 @@
+---
+title: "Bootstrap and Confidence Interval"
+author: "Debit Paudel"
+date: "12/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+Bootstrap is a resampling method where large numbers of samples of the same size are repeatedly drawn,**with replacement**, from a single original sample.
+Resample, calculate a statistic (e.g. the mean), repeat this hundreds or thousands of times and you are able to estimate a precise/accurate uncertainty of the mean (confidence interval) of the data’s distribution.
+
+```{r}
+x <- runif(10)
+hist(x)
+mean(x)
+resample <- sample(x, replace = TRUE)
+mean(resample)
+library(dplyr)
+library(ggplot2)
+# Resample 100 times, and find the mean of each
+tibble(num = 1:100) %>% 
+    group_by(num) %>% 
+    mutate(means = mean(sample(x, replace = TRUE))) %>% 
+    ggplot(aes(x = means)) +
+    geom_freqpoly()
+    
+# Resample a 5000 times, and find the mean of each
+tibble(num = 1:5000) %>% 
+    group_by(num) %>% 
+    mutate(means = mean(sample(x, replace = TRUE))) %>% 
+    ggplot(aes(x = means)) +
+    geom_freqpoly()
+
+```
+There is an R package that does bootstraping called `boot`. `boot` function we need a function that calculates the average based on the resampling of the data. that Takes two arguments, a value (`x`) and a value resampling vector (`I`).
+
+```{r}
+library(boot)
+# Create a function to take a resample of the values, 
+# and then calculate the mean
+boot_mean <- function(original_vector, resample_vector) {
+    mean(original_vector[resample_vector])
+}
+# R is number of replications
+mean_results <- boot(x, boot_mean, R = 2000)
+# Load broom to get a tidy dataframe as output.
+library(broom)
+tidy(mean_results)
+# Calculate the confidence intervals
+boot.ci(mean_results)
+
+
+# If you bootstrap for a statistic with two values, the individual rows are
+# resampled. However, the rows are still paired together (no reshuffling of the
+# order occurs).
+
+
+boot_corr <- function(data, resample_vector) {
+    cor(data$x[resample_vector], data$y[resample_vector])
+}
+ds <- data.frame(y = runif(10), x = runif(10))
+# Original correlation
+cor(ds$x, ds$y)
+# Bootstrapped correlation
+cor_results <- boot(ds, boot_corr, R = 100)
+tidy(cor_results)
+# Plus confidence interval
+boot.ci(cor_results)
+
+boot_corr <- function(data, resample_vector) {
+    cor(data$x[resample_vector], data$y[resample_vector])
+}
+ds <- data.frame(y = runif(10), x = runif(10))
+# Original correlation
+cor(ds$x, ds$y)
+# Bootstrapped correlation
+cor_results <- boot(ds, boot_corr, R = 100)
+tidy(cor_results)
+# Plus confidence interval
+boot.ci(cor_results)
+```
+Hence, we are able to compute the confidence intervals too.
+
+
